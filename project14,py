@@ -1,0 +1,152 @@
+import pygame
+import random
+
+pygame.init()
+
+
+SCREEN_WIDTH = 300
+SCREEN_HEIGHT = 600
+GRID_SIZE = 30  
+GRID_WIDTH = 10
+GRID_HEIGHT = 20
+
+
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+pygame.display.set_caption('Tetris')
+
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+RED = (255, 0, 0)
+GREEN = (0, 255, 0)
+BLUE = (0, 0, 255)
+CYAN = (0, 255, 255)
+YELLOW = (255, 255, 0)
+PURPLE = (255, 0, 255)
+ORANGE = (255, 165, 0)
+COLOR_MAP = {
+    'I': CYAN,
+    'O': YELLOW,
+    'T': PURPLE,
+    'L': ORANGE,
+    'J': BLUE,
+    'S': GREEN,
+    'Z': RED
+}
+
+
+TETRIMINOS = {
+    'I': [[(0, 1), (1, 1), (2, 1), (3, 1)]],
+    'O': [[(0, 0), (0, 1), (1, 0), (1, 1)]],
+    'T': [[(1, 0), (0, 1), (1, 1), (2, 1)]],
+    'L': [[(1, 0), (1, 1), (1, 2), (0, 2)]],
+    'J': [[(1, 0), (1, 1), (1, 2), (2, 2)]],
+    'S': [[(1, 0), (2, 0), (0, 1), (1, 1)]],
+    'Z': [[(0, 0), (1, 0), (1, 1), (2, 1)]]
+}
+
+
+def get_random_tetrimino():
+    shape_name = random.choice(list(TETRIMINOS.keys()))
+    shape = random.choice(TETRIMINOS[shape_name])
+    color = COLOR_MAP[shape_name]
+    return shape, color
+
+def draw_grid():
+    for x in range(0, SCREEN_WIDTH, GRID_SIZE):
+        for y in range(0, SCREEN_HEIGHT, GRID_SIZE):
+            pygame.draw.rect(screen, WHITE, (x, y, GRID_SIZE, GRID_SIZE), 1)
+
+
+def draw_tetrimino(tetrimino, color, offset_x, offset_y):
+    for x, y in tetrimino:
+        pygame.draw.rect(screen, color, ((offset_x + x) * GRID_SIZE, (offset_y + y) * GRID_SIZE, GRID_SIZE, GRID_SIZE))
+
+
+def is_valid_position(board, tetrimino, offset_x, offset_y):
+    for x, y in tetrimino:
+        if x + offset_x < 0 or x + offset_x >= GRID_WIDTH or y + offset_y >= GRID_HEIGHT:
+            return False
+        if y + offset_y >= 0 and board[y + offset_y][x + offset_x]:
+            return False
+    return True
+
+
+def place_tetrimino(board, tetrimino, offset_x, offset_y, color):
+    for x, y in tetrimino:
+        board[y + offset_y][x + offset_x] = color
+
+
+def clear_lines(board):
+    full_lines = []
+    for i, row in enumerate(board):
+        if all(cell != 0 for cell in row):
+            full_lines.append(i)
+    for line in full_lines:
+        del board[line]
+        board.insert(0, [0] * GRID_WIDTH)
+    return len(full_lines)
+
+
+def draw_game_state(board, tetrimino, color, offset_x, offset_y):
+    screen.fill(BLACK)
+    draw_grid()
+    draw_tetrimino(tetrimino, color, offset_x, offset_y)
+
+  
+    for y in range(GRID_HEIGHT):
+        for x in range(GRID_WIDTH):
+            if board[y][x]:
+                pygame.draw.rect(screen, board[y][x], (x * GRID_SIZE, y * GRID_SIZE, GRID_SIZE, GRID_SIZE))
+    
+    pygame.display.update()
+
+
+def main():
+    board = [[0] * GRID_WIDTH for _ in range(GRID_HEIGHT)]
+    game_over = False
+    tetrimino, color = get_random_tetrimino()
+    offset_x, offset_y = 3, 0
+    clock = pygame.time.Clock()
+    score = 0
+
+    while not game_over:
+        draw_game_state(board, tetrimino, color, offset_x, offset_y)
+        
+      
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                game_over = True
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_LEFT:
+                    if is_valid_position(board, tetrimino, offset_x - 1, offset_y):
+                        offset_x -= 1
+                if event.key == pygame.K_RIGHT:
+                    if is_valid_position(board, tetrimino, offset_x + 1, offset_y):
+                        offset_x += 1
+                if event.key == pygame.K_DOWN:
+                    if is_valid_position(board, tetrimino, offset_x, offset_y + 1):
+                        offset_y += 1
+                if event.key == pygame.K_UP:
+                    rotated = [(y, -x) for x, y in tetrimino]
+                    if is_valid_position(board, rotated, offset_x, offset_y):
+                        tetrimino = rotated
+
+        
+        if is_valid_position(board, tetrimino, offset_x, offset_y + 1):
+            offset_y += 1
+        else:
+            place_tetrimino(board, tetrimino, offset_x, offset_y, color)
+            score += clear_lines(board)
+            tetrimino, color = get_random_tetrimino()
+            offset_x, offset_y = 3, 0
+
+            if not is_valid_position(board, tetrimino, offset_x, offset_y):
+                game_over = True
+
+        clock.tick(10)  
+
+    pygame.quit()
+    print(f"Game Over! Your score is {score}")
+
+if __name__ == "__main__":
+    main()
